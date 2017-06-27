@@ -1,5 +1,5 @@
 
-import { EmailConfigs, FlowConfigs, EmailLogs } from './connectors'
+import { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } from './connectors'
 
 const channels = [{
   id: '1',
@@ -33,9 +33,7 @@ const filterItems = (arr, query) => {
 
 export const resolvers = {
   Query: {
-    channels: () => {
-      return channels
-    },
+    channels: () => channels,
     channelById: (root, { id }) => {
       return channels.find(channel => channel.id === id)
     },
@@ -55,6 +53,47 @@ export const resolvers = {
         .then(emailLogs => emailLogs)
       return result
     },
+    userLists: () => {
+      const result = UserLists.find({}).lean().exec()
+        .then((userLists) => {
+          // console.log(userLists)
+          return userLists
+        })
+      return result
+    },
+    userListById: (root, { id, pageValue }) => {
+      const result = UserLists.findById({ _id: id }).lean().exec()
+        .then((userList) => {
+          return UserLogs.paginate(
+            { userId: userList._id }, {
+              page: pageValue,
+              limit: 5,
+              sort: { timestamp: 1 }
+            }
+          ).then((userLogs) => {
+            if (userLogs.page <= userLogs.pages) {
+              userList.logs = userLogs.docs
+              userList.pageNow = userLogs.page
+              userList.pageAll = userLogs.pages
+              return userList
+            }
+            return UserLogs.paginate(
+                { userId: userList._id }, {
+                  page: 1,
+                  limit: 5,
+                  sort: { timestamp: 1 }
+                }
+              ).then((newUserLogs) => {
+                userList.logs = newUserLogs.docs
+                userList.pageNow = newUserLogs.page
+                userList.pageAll = newUserLogs.pages
+                console.log(userList)
+                return userList
+              })
+          })
+        })
+      return result
+    },
     emailLogById: (root, { id }) => {
       console.log('test')
       const result = EmailLogs.findById({ _id: id }).lean().exec()
@@ -63,6 +102,15 @@ export const resolvers = {
           return EmailConfigs.findById({ _id: emailLog.mailConfig }).lean().exec()
             .then((mailConfig) => {
               emailLog.mailConfig = mailConfig
+              console.log(emailLog)
+              return emailLog
+            })
+        })
+        .then((emailLog) => {
+          console.log(emailLog)
+          return FlowConfigs.findById({ _id: emailLog.expectedFlow.flow }).lean().exec()
+            .then((flow) => {
+              emailLog.expectedFlow.flow = flow
               console.log(emailLog)
               return emailLog
             })

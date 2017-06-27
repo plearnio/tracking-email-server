@@ -39,7 +39,7 @@ tracking.use((req, res, next) => {
 })
 
 tracking.route('/:activity/:flow')
-  .get((req) => {
+  .post((req) => {
     console.log(req)
     trackActivity(req)
   })

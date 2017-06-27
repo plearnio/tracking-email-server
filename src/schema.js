@@ -16,6 +16,13 @@ type Message {
   text: String
 }
 
+type UserLogs {
+  _id: ID!
+  userId: String
+  action: String
+  timestamp: String
+}
+
 type EmailConfigs {
   _id: ID!
   name: String
@@ -25,6 +32,15 @@ type EmailConfigs {
 type Counter {
   click: Int
   open: Int
+}
+
+type Actions {
+  name: String
+}
+
+type ExpectedFlow {
+  flow: FlowConfigs
+  success: Float
 }
 
 type FlowConfigs {
@@ -37,9 +53,14 @@ type FlowConfigs {
   successAction: Actions
 }
 
-type ExpectedFlow {
-  flow: FlowConfigs
-  success: Float
+type UserLists {
+  _id: ID!
+  name: String
+  userEmail: String
+  age: Int
+  pageNow: Int
+  pageAll: Int
+  logs: [UserLogs]
 }
 
 type EmailLogs {
@@ -47,11 +68,7 @@ type EmailLogs {
   toUser: String!
   mailConfig: EmailConfigs
   counter: Counter
-  expectedFlow: [ExpectedFlow]
-}
-
-type Actions {
-  name: String
+  expectedFlow: ExpectedFlow
 }
 
 input MessageInput{
@@ -65,11 +82,13 @@ type Query {
   channelById(id: ID!): Channel
   channelname(name: String!): [Channel]
   emailConfigs: [EmailConfigs]
+  emailConfigById(id: ID!): EmailConfigs
   flowConfigs: [FlowConfigs]
   flowConfigById(id: ID!): FlowConfigs
   emailLogs: [EmailLogs]
   emailLogById(id: ID!): EmailLogs
-  emailConfigById(id: ID!): EmailConfigs
+  userLists: [UserLists]
+  userListById(id: ID!, pageValue: Int): UserLists
 }
 
 # The mutation root type, used to define all mutations
