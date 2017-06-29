@@ -95,7 +95,6 @@ export const resolvers = {
       return result
     },
     emailLogById: (root, { id }) => {
-      console.log('test')
       const result = EmailLogs.findById({ _id: id }).lean().exec()
         .then((emailLog) => {
           console.log(emailLog)

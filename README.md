@@ -9,6 +9,8 @@
 - build to apollo server 
 	- create resolvers, connectors and schema
 - join apollo server with tracking server
+# NEW 
+= add more resolver for client's extensions 
 
 # done
 90%
@@ -16,7 +18,9 @@
 - tracking server
 - database connection
 - connect apollo server with tracking server
+20%
+- implement some aggregation in resolver
 
 # processing
-10%
-- sending email to user for demo 
+- implement more aggregation in resolver 20%
+- sending email to user for demo 0%

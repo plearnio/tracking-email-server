@@ -10,6 +10,7 @@ import cors from 'cors'
 import { schema } from './src/schema'
 
 import tracking from './src/route/tracking'
+import sendMail from './src/route/sendMail'
 
 const PORT = 4000
 const server = express()
@@ -27,6 +28,7 @@ server.use('/graphiql', graphiqlExpress({
 }))
 
 server.use('/tracking', tracking)
+server.use('/sendmail', sendMail)
 
 server.listen(PORT, () =>
   console.log(`Server is now running on http://localhost:${PORT}`)
