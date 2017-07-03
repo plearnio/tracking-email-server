@@ -11,16 +11,20 @@
 - join apollo server with tracking server
 # NEW 
 = add more resolver for client's extensions 
+= prepare demo
 
 # done
-90%
 - apollo server 
 - tracking server
 - database connection
 - connect apollo server with tracking server
-20%
 - implement some aggregation in resolver
+- sending email to user for demo
 
 # processing
-- implement more aggregation in resolver 20%
-- sending email to user for demo 0%
+- implement more aggregation in resolver
+	- show successful in percentage for mail configs, flow configs, and user
+	- search
+- demo
+	- connect mail with user data and maillogs
+	- select mail configs and flow configs

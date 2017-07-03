@@ -9,14 +9,6 @@ const Flow = require('../models/Flow')
 const tracking = express.Router()
 tracking.use(cookieParser())
 
-const setCookies = (cookie, res) => {
-  const userId = '5938f00a762ddb3642ac7399'
-  res.cookie('userIdJitta', userId, { maxAge: 900000, httpOnly: true })
-  res.send()
-  console.log(`cookie created successfully, ${userId}`)
-  return userId
-}
-
 class TrackData {
   constructor(reqUrl) {
     this.userLog = {
@@ -28,66 +20,28 @@ class TrackData {
   }
 }
 
+const setCookies = (cookie, res) => {
+  const userId = '5938f00a762ddb3642ac7399'
+  res.cookie('userIdJitta', userId, { maxAge: 900000, httpOnly: true })
+  console.log(`cookie created successfully, ${userId}`)
+  return userId
+}
+
 tracking.use((req, res, next) => {
   const cookieUserIdJitta = req.cookies.userIdJitta;
   console.log(req.cookies)
   if (!cookieUserIdJitta) {
     req.cookies.userIdJitta = setCookies(cookieUserIdJitta, res)
-  }
-  // res.cookie('userIdJitta', 'test', { maxAge: 900000, httpOnly: true })
-  next()
+  } else {
+    // yes, cookie was already present 
+    console.log('cookie exists', cookie);
+  } next()
 })
 
-tracking.route('/:activity/:flow')
-  .post((req) => {
-    console.log(req)
-    trackActivity(req)
-  })
-
-const trackActivity = (reqUrl) => {
-  const trackData = new TrackData(reqUrl)
-  findFlow(trackData)
-}
-
-const findFlow = (trackData) => {
-  Flow.findOne({ name: trackData.userLog.flow }).lean().exec()
-    .then((docs) => {
-      if (docs) {
-        trackData.flowData = {
-          allProcess: docs.actionsLen,
-          flowId: docs._id,
-          successAction: docs.successAction
-        }
-      }
-      saveLog(trackData)
-    })
-    .catch((err) => {
-      console.log(err)
-    })
-}
-
-const saveLog = (trackData) => {
-  console.log(trackData)
-  if (trackData.flowData) {
-    const meta = UserLog(trackData.userLog)
-    meta.save().then(() => {
-      console.log(`add log user : ${trackData.userLog.userId} -> ${trackData.userLog.action}`)
-      findAction(trackData)
-    }).catch((err) => {
-      if (err) console.log(err)
-    })
-  }
-}
-
-const findAction = (trackData) => {
-  const userIdFromLog = trackData.userLog.userId
-  UserLog.find({ userId: userIdFromLog }).distinct('action', (err, docs) => {
+const saveEmailLog = (emailLog) => {
+  emailLog.save((err) => {
     if (err) console.log(err)
-    else {
-      trackData.activeProcess = docs.length
-      trackData.percentSuccess = (trackData.activeProcess / trackData.flowData.allProcess) * 100
-      findEmailLog(trackData)
-    }
+    console.log('Update email log')
   })
 }
 
@@ -113,11 +67,57 @@ const findEmailLog = (trackData) => {
   })
 }
 
-const saveEmailLog = (emailLog) => {
-  emailLog.save((err) => {
+const findAction = (trackData) => {
+  const userIdFromLog = trackData.userLog.userId
+  UserLog.find({ userId: userIdFromLog }).distinct('action', (err, docs) => {
     if (err) console.log(err)
-    console.log('Update email log')
+    else {
+      trackData.activeProcess = docs.length
+      trackData.percentSuccess = (trackData.activeProcess / trackData.flowData.allProcess) * 100
+      findEmailLog(trackData)
+    }
   })
 }
+
+const saveLog = (trackData) => {
+  console.log(trackData)
+  if (trackData.flowData) {
+    const meta = UserLog(trackData.userLog)
+    meta.save().then(() => {
+      console.log(`add log user : ${trackData.userLog.userId} -> ${trackData.userLog.action}`)
+      findAction(trackData)
+    }).catch((err) => {
+      if (err) console.log(err)
+    })
+  }
+}
+
+const findFlow = (trackData) => {
+  Flow.findOne({ name: trackData.userLog.flow }).lean().exec()
+    .then((docs) => {
+      if (docs) {
+        trackData.flowData = {
+          allProcess: docs.actionsLen,
+          flowId: docs._id,
+          successAction: docs.successAction
+        }
+      }
+      saveLog(trackData)
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+}
+
+const trackActivity = (reqUrl) => {
+  const trackData = new TrackData(reqUrl)
+  findFlow(trackData)
+}
+
+tracking.route('/:activity/:flow')
+  .get((req) => {
+    // console.log(req)
+    trackActivity(req)
+  })
 
 module.exports = tracking
