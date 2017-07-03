@@ -22,9 +22,9 @@
 - sending email to user for demo
 
 # processing
-- implement more aggregation in resolver
+- implement more aggregation in resolver 2
 	- show successful in percentage for mail configs, flow configs, and user
 	- search
-- demo
-	- connect mail with user data and maillogs
+- demo 1
+	- connect mail with user data and maillogs 
 	- select mail configs and flow configs
