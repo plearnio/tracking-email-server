@@ -1,27 +1,5 @@
-
+import mongoose from 'mongoose'
 import { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } from './connectors'
-
-const channels = [{
-  id: '1',
-  name: 'soccer',
-  messages: [{
-    id: '1',
-    text: 'soccer is football',
-  }, {
-    id: '2',
-    text: 'hello soccer world cup',
-  }]
-}, {
-  id: '2',
-  name: 'baseball',
-  messages: [{
-    id: '3',
-    text: 'baseball is life',
-  }, {
-    id: '4',
-    text: 'hello baseball world series',
-  }]
-}]
 
 const filterItems = (arr, query) => {
   const result = arr.filter((el) => {
@@ -33,13 +11,6 @@ const filterItems = (arr, query) => {
 
 export const resolvers = {
   Query: {
-    channels: () => channels,
-    channelById: (root, { id }) => {
-      return channels.find(channel => channel.id === id)
-    },
-    channelname: (root, { name }) => {
-      return filterItems(channels, name)
-    },
     emailConfigs: () => {
       const result = EmailConfigs.find({}, emailConfig => emailConfig)
       return result
@@ -55,10 +26,7 @@ export const resolvers = {
     },
     userLists: () => {
       const result = UserLists.find({}).lean().exec()
-        .then((userLists) => {
-          // console.log(userLists)
-          return userLists
-        })
+        .then(userLists => userLists)
       return result
     },
     userListById: (root, { id, pageValue }) => {
@@ -87,9 +55,56 @@ export const resolvers = {
                 userList.logs = newUserLogs.docs
                 userList.pageNow = newUserLogs.page
                 userList.pageAll = newUserLogs.pages
-                console.log(userList)
                 return userList
               })
+          })
+        })
+        .then((userList) => {
+          return EmailLogs.aggregate([
+            {
+              $match: {
+                toUser: mongoose.Types.ObjectId(id)
+              }
+            }, {
+              $group: {
+                _id: '$mailConfig',
+                count: { $sum: 1 },
+                success: { $avg: '$success' },
+                clickAvg: { $avg: '$counter.click' },
+                openAvg: { $avg: '$counter.click' }
+              }
+            }, {
+              $lookup: {
+                from: 'emailconfigs',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'mailConfig'
+              }
+            }
+          ]).then((statData) => {
+            userList.emailConfigListStat = statData
+            return userList
+          })
+        })
+        .then((userList) => {
+          return EmailLogs.aggregate([
+            {
+              $match: {
+                toUser: mongoose.Types.ObjectId(id)
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                successAvg: { $avg: '$success' },
+                clickAvg: { $avg: '$counter.click' },
+                openAvg: { $avg: '$counter.click' }
+              }
+            }
+          ]).then((statData) => {
+            userList.allStat = statData[0]
+            return userList
           })
         })
       return result
@@ -97,20 +112,9 @@ export const resolvers = {
     emailLogById: (root, { id }) => {
       const result = EmailLogs.findById({ _id: id }).lean().exec()
         .then((emailLog) => {
-          console.log(emailLog)
           return EmailConfigs.findById({ _id: emailLog.mailConfig }).lean().exec()
             .then((mailConfig) => {
               emailLog.mailConfig = mailConfig
-              console.log(emailLog)
-              return emailLog
-            })
-        })
-        .then((emailLog) => {
-          console.log(emailLog)
-          return FlowConfigs.findById({ _id: emailLog.expectedFlow.flow }).lean().exec()
-            .then((flow) => {
-              emailLog.expectedFlow.flow = flow
-              console.log(emailLog)
               return emailLog
             })
         })
@@ -119,7 +123,35 @@ export const resolvers = {
     emailConfigById: (root, { id }) => {
       const result = EmailConfigs.findById({ _id: id }).lean().exec()
         .then((mailConfig) => {
-          console.log(mailConfig)
+          mailConfig.statistic = EmailLogs.aggregate([
+            {
+              $group: {
+                _id: '$mailConfig',
+                total: { $sum: 1 },
+                successAvg: { $avg: '$success' }
+              }
+            },
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(id)
+              }
+            }
+          ]).then((statData) => {
+            return statData[0]
+          })
+          mailConfig.allSuccess = EmailLogs.aggregate([
+            {
+              $match:
+              {
+                mailConfig: mongoose.Types.ObjectId(id)
+              }
+            }, {
+              $group: {
+                _id: '$success',
+                count: { $sum: 1 }
+              }
+            }
+          ]).then(successData => successData)
           return mailConfig
         })
       return result
@@ -127,29 +159,43 @@ export const resolvers = {
     flowConfigById: (root, { id }) => {
       const result = FlowConfigs.findById({ _id: id }).lean().exec()
         .then((FlowConfig) => {
-          console.log(FlowConfig)
-          return FlowConfig
+          return EmailConfigs.find({ expectedFlow: { $in: [mongoose.Types.ObjectId(id)] } }).lean().exec()
+            .then((emailConfig) => {
+              FlowConfig.statistic = EmailLogs.aggregate([
+                {
+                  $group: {
+                    _id: '$mailConfig',
+                    total: { $sum: 1 },
+                    successAvg: { $avg: '$success' }
+                  }
+                },
+                {
+                  $match: {
+                    _id: mongoose.Types.ObjectId(emailConfig[0]._id)
+                  }
+                }
+              ]).then((statData) => {
+                return statData[0]
+              })
+              FlowConfig.allSuccess = EmailLogs.aggregate([
+                {
+                  $match:
+                  {
+                    mailConfig: mongoose.Types.ObjectId(emailConfig[0]._id)
+                  }
+                }, {
+                  $group: {
+                    _id: '$success',
+                    count: { $sum: 1 }
+                  }
+                }
+              ]).then((successData) => {
+                return successData
+              })
+              return FlowConfig
+            })
         })
       return result
     }
-  },
-  Mutation: {
-    addChannel: (root, args) => {
-      const newChannel = { id: String(nextId += 1), messages: [], name: args.name }
-      channels.push(newChannel)
-      return newChannel
-    },
-    addMessage: (root, { message }) => {
-      const channel = channels.find(el => el.id === message.el)
-      if (!channel) throw new Error('Channel does not exist')
-      const newMessage = { id: String(nextMessageId += 1), text: message.text }
-      channel.messages.push(newMessage)
-      return newMessage
-    },
-    searchChannel: (root, args) => {
-      const newChannels = filterItems(channels, args.name)
-      if (!newChannels) throw new Error('Channels does not exist')
-      return newChannels
-    }
-  },
+  }
 }

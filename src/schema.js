@@ -1,16 +1,10 @@
 import {
-  makeExecutableSchema,
+    makeExecutableSchema,
 } from 'graphql-tools';
 
 import { resolvers } from './resolvers';
 
 const typeDefs = `
-type Channel {
-  id: ID!                # "!" denotes a required field
-  name: String
-  messages: [Message]!
-}
-
 type Message {
   id: ID!
   text: String
@@ -23,10 +17,23 @@ type UserLogs {
   timestamp: String
 }
 
+type Success {
+  _id: String
+  count: Int
+}
+
+type Statistic {
+  total: Int
+  successAvg: Float
+}
+
 type EmailConfigs {
   _id: ID!
   name: String
   description: String
+  expectedFlow: [String]
+  statistic: Statistic
+  allSuccess: [Success]
 }
 
 type Counter {
@@ -38,11 +45,6 @@ type Actions {
   name: String
 }
 
-type ExpectedFlow {
-  flow: FlowConfigs
-  success: Float
-}
-
 type FlowConfigs {
   _id: ID!
   name: String
@@ -51,6 +53,15 @@ type FlowConfigs {
   url: String
   actionsLen: Int
   successAction: Actions
+  statistic: Statistic
+  allSuccess: [Success]
+}
+
+type AllStat {
+  count: Int,
+  successAvg: Float,
+  clickAvg : Float,
+  openAvg : Float
 }
 
 type UserLists {
@@ -61,6 +72,17 @@ type UserLists {
   pageNow: Int
   pageAll: Int
   logs: [UserLogs]
+  emailConfigListStat: [EmailConfigListStat]
+  allStat: AllStat
+}
+
+type EmailConfigListStat {
+  _id: ID!
+  mailConfig: [EmailConfigs]
+  clickAvg: Float
+  openAvg: Float
+  success: Float
+  count: Int 
 }
 
 type EmailLogs {
@@ -68,8 +90,9 @@ type EmailLogs {
   toUser: String!
   mailConfig: EmailConfigs
   counter: Counter
-  expectedFlow: ExpectedFlow
+  success: Float
 }
+
 
 input MessageInput{
   channelId: ID!
@@ -78,9 +101,6 @@ input MessageInput{
 
 # This type specifies the entry points into our API
 type Query {
-  channels: [Channel]    # "[]" means this is a list of channels
-  channelById(id: ID!): Channel
-  channelname(name: String!): [Channel]
   emailConfigs: [EmailConfigs]
   emailConfigById(id: ID!): EmailConfigs
   flowConfigs: [FlowConfigs]
@@ -90,13 +110,7 @@ type Query {
   userLists: [UserLists]
   userListById(id: ID!, pageValue: Int): UserLists
 }
-
-# The mutation root type, used to define all mutations
-type Mutation {
-  addChannel(name: String!): Channel
-  addMessage(message: MessageInput!): Message
-  searchChannel(name: String!): [Channel]
-}
 `
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers })
+

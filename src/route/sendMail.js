@@ -1,3 +1,5 @@
+import EmailLogs from '../models/EmailLog'
+
 const express = require('express')
 const nodemailer = require('nodemailer')
 
@@ -5,16 +7,13 @@ const tracking = express.Router()
 
 tracking.use((req, res, next) => {
   console.log(req.body)
-  if (req.body.secret !== 'jitta101') res.send('wrong secret code')
-  else {
-    next()
-  }
+  next()
 })
 
 tracking.route('/')
   .post((req, res) => {
-    console.log(req.body)
-    const { fromMail, fromPassword, toMail } = req.body
+    const { data: { name, userEmail, _id }, fromPassword, fromMail, emailConfig } = req.body
+    console.log(emailConfig)
     const transporter = nodemailer.createTransport({
       service: 'Gmail',
       auth: {
@@ -23,13 +22,13 @@ tracking.route('/')
       },
       debug: true
     }, {
-      from: `Register Test ! <${fromMail}>`
+      from: `${emailConfig.name} Demo <${fromMail}>`
     })
     console.log('SMTP Configured')
     const message = {
-      to: `Andris Reinman <${toMail}>`,
-      subject: 'Check Register Mail Demo ✔', //
-      html: '<center style="padding: 20px; border: 2px dashed #ddd"><h1 style="color:#b1a6ef">Register</h1><a href="http://localhost:3000/demo">click</a></center>',
+      to: `${name} <${userEmail}>`,
+      subject: `Check ${emailConfig.name} Mail Demo ✔`, //
+      html: `<center style="padding: 20px; border: 2px dashed #ddd"><h1 style="color:#b1a6ef">${emailConfig.name}</h1><a class="call-to-action" href="http://localhost:3000/demo/${emailConfig.name}">click</a></center>`,
     };
     console.log('Sending Mail');
     transporter.sendMail(message, (error, info) => {
@@ -41,7 +40,21 @@ tracking.route('/')
       }
       console.log('Message sent successfully!');
       console.log('Server responded with "%s"', info.response);
-      res.send('correct !')
+      const newEmailLogs = EmailLogs({
+        toUser: _id,
+        mailConfig: emailConfig._id,
+        counter: {
+          click: 0,
+          open: 0
+        },
+        success: 0
+      })
+      newEmailLogs.save().then(() => {
+        console.log('Add log to database !');
+        res.send('correct !')
+      }).catch((err) => {
+        console.log(err)
+      })
       transporter.close();
     });
   })

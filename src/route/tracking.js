@@ -1,5 +1,5 @@
 const express = require('express')
-const path = require('path')
+const mongoose = require('mongoose')
 const cookieParser = require('cookie-parser')
 
 const UserLog = require('../models/UserLog')
@@ -12,34 +12,23 @@ tracking.use(cookieParser())
 class TrackData {
   constructor(reqUrl) {
     this.userLog = {
-      userId: reqUrl.cookies.userIdJitta,
-      flow: reqUrl.params.flow || '',
-      action: reqUrl.params.activity || '',
+      userId: reqUrl.body.user || '',
+      flow: reqUrl.body.flowName || '',
+      action: reqUrl.body.actionName || '',
       timestamp: new Date()
     }
   }
 }
 
-const setCookies = (cookie, res) => {
-  const userId = '5938f00a762ddb3642ac7399'
-  res.cookie('userIdJitta', userId, { maxAge: 900000, httpOnly: true })
-  console.log(`cookie created successfully, ${userId}`)
-  return userId
-}
-
 tracking.use((req, res, next) => {
-  const cookieUserIdJitta = req.cookies.userIdJitta;
-  console.log(req.cookies)
-  if (!cookieUserIdJitta) {
-    req.cookies.userIdJitta = setCookies(cookieUserIdJitta, res)
-  } else {
-    // yes, cookie was already present 
-    console.log('cookie exists', cookie);
-  } next()
+  if (req.body.secretToken !== 'secret@123') res.status(500).send('Invalid secret token !')
+  else {
+    next()
+  }
 })
 
 const saveEmailLog = (emailLog) => {
-  emailLog.save((err) => {
+  EmailLog.findOneAndUpdate({ _id: emailLog._id }, { success: emailLog.success }, (err) => {
     if (err) console.log(err)
     console.log('Update email log')
   })
@@ -47,40 +36,53 @@ const saveEmailLog = (emailLog) => {
 
 const findEmailLog = (trackData) => {
   console.log(`percent : ${trackData.percentSuccess}%`)
-  EmailLog.find({ toUser: trackData.userLog.userId }, (err, docs) => {
-    docs.forEach((entry, index) => {
-      // check expected flow in Emaillog and compare with flowid from Flow
-      if (JSON.stringify(entry.expectedFlow.flow) === JSON.stringify(trackData.flowData.flowId)) {
-        const userAction = trackData.userLog.action
-        const flowsuccessAction = trackData.flowData.successAction.name
-        const expectedSuccess = entry.expectedFlow.success
-        const percentAllSuccess = trackData.percentSuccess
-        if (userAction === flowsuccessAction) {
-          docs[index].expectedFlow.success = 100.0
-        } else if (expectedSuccess < percentAllSuccess) {
-          // Compare succes before add action and after add action
-          docs[index].expectedFlow.success = trackData.percentSuccess
-          saveEmailLog(docs[index])
-        }
+  EmailLog.aggregate([
+    {
+      $match: { toUser: mongoose.Types.ObjectId(trackData.userLog.userId) }
+    }, {
+      $lookup:
+      {
+        from: 'emailconfigs',
+        localField: 'mailConfig',
+        foreignField: '_id',
+        as: 'mailConfig'
       }
+    }
+  ], (err, docs) => {
+    docs.forEach((entry, index) => {
+      entry.mailConfig[0].expectedFlow.forEach((expectedFlow) => {
+        if (JSON.stringify(expectedFlow) === JSON.stringify(trackData.flowData._id)) {
+          const userAction = trackData.userLog.action
+          const flowsuccessAction = trackData.flowData.successAction.name
+          const expectedSuccess = entry.success
+          const percentAllSuccess = trackData.percentSuccess
+          if (userAction === flowsuccessAction) {
+            docs[index].success = 100.0
+            saveEmailLog(docs[index])
+          } else if (expectedSuccess < percentAllSuccess) {
+            docs[index].success = trackData.percentSuccess
+            saveEmailLog(docs[index])
+          }
+        }
+      })
     })
   })
 }
 
 const findAction = (trackData) => {
   const userIdFromLog = trackData.userLog.userId
-  UserLog.find({ userId: userIdFromLog }).distinct('action', (err, docs) => {
+  const flowFromLog = mongoose.Types.ObjectId(trackData.flowData._id)
+  UserLog.find({ userId: userIdFromLog, flow: flowFromLog }).distinct('action', (err, docs) => {
     if (err) console.log(err)
     else {
       trackData.activeProcess = docs.length
-      trackData.percentSuccess = (trackData.activeProcess / trackData.flowData.allProcess) * 100
+      trackData.percentSuccess = (trackData.activeProcess / trackData.flowData.actionsLen) * 100
       findEmailLog(trackData)
     }
   })
 }
 
 const saveLog = (trackData) => {
-  console.log(trackData)
   if (trackData.flowData) {
     const meta = UserLog(trackData.userLog)
     meta.save().then(() => {
@@ -92,32 +94,29 @@ const saveLog = (trackData) => {
   }
 }
 
-const findFlow = (trackData) => {
-  Flow.findOne({ name: trackData.userLog.flow }).lean().exec()
+const findFlow = (reqUrl) => {
+  const trackData = new TrackData(reqUrl)
+  Flow.find({
+    name: { $regex: new RegExp(`^${trackData.userLog.flow.toLowerCase()}`, 'i') },
+    actions: { $elemMatch: { name: { $regex: new RegExp(`^${trackData.userLog.action.toLowerCase()}`, 'i') } } }
+  }).lean().exec()
     .then((docs) => {
-      if (docs) {
-        trackData.flowData = {
-          allProcess: docs.actionsLen,
-          flowId: docs._id,
-          successAction: docs.successAction
-        }
+      if (docs[0]) {
+        const flowData = docs[0]
+        trackData.userLog.flow = flowData._id.toString()
+        trackData.flowData = flowData
+        console.log(trackData.flowData)
+        saveLog(trackData)
       }
-      saveLog(trackData)
     })
     .catch((err) => {
       console.log(err)
     })
 }
 
-const trackActivity = (reqUrl) => {
-  const trackData = new TrackData(reqUrl)
-  findFlow(trackData)
-}
-
-tracking.route('/:activity/:flow')
-  .get((req) => {
-    // console.log(req)
-    trackActivity(req)
+tracking.route('/')
+  .post((req) => {
+    findFlow(req)
   })
 
 module.exports = tracking

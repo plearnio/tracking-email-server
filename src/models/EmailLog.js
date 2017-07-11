@@ -5,15 +5,12 @@ const Schema = mongoose.Schema
 
 const emailLogScheme = new Schema({
   toUser: Schema.Types.ObjectId,
-  mailType: Schema.Types.ObjectId,
+  mailConfig: Schema.Types.ObjectId,
   counter: {
     click: Number,
     open: Number,
   },
-  expectedFlow: {
-    flow: Schema.Types.ObjectId,
-    success: Number
-  }
+  success: Number,
 })
 
 const EmailLog = mongoose.model('EmailLog', emailLogScheme)

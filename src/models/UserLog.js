@@ -11,8 +11,9 @@ const userLogScheme = new Schema({
   action: String,
   timestamp: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
+  flow: Schema.Types.ObjectId,
 })
 
 userLogScheme.plugin(mongoosePaginate)

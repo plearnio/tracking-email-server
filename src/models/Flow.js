@@ -6,12 +6,12 @@ const Schema = mongoose.Schema
 const flowScheme = new Schema({
   name: String,
   actions: [{
-    name: String
+    name: String,
   }],
   url: String,
   actionslen: Number,
   successAction: String,
-  description: String
+  description: String,
 })
 
 const Flow = mongoose.model('Flow', flowScheme)
