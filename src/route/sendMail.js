@@ -28,7 +28,7 @@ tracking.route('/')
     const message = {
       to: `${name} <${userEmail}>`,
       subject: `Check ${emailConfig.name} Mail Demo ✔`, //
-      html: `<center style="padding: 20px; border: 2px dashed #ddd"><h1 style="color:#b1a6ef">${emailConfig.name}</h1><a class="call-to-action" href="http://localhost:3000/demo/${emailConfig.name}">click</a></center>`,
+      html: `<center style="padding: 20px; border: 2px dashed #ddd"><h1 style="color:#b1a6ef">${emailConfig.name}</h1>git</center>`,
     };
     console.log('Sending Mail');
     transporter.sendMail(message, (error, info) => {
