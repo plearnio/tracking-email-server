@@ -1,8 +1,8 @@
-import {
+const {
     makeExecutableSchema,
-} from 'graphql-tools';
+} = require('graphql-tools')
 
-import { resolvers } from './resolvers';
+const resolvers = require('./resolvers')
 
 const typeDefs = `
 type Message {
@@ -112,5 +112,5 @@ type Query {
 }
 `
 
-export const schema = makeExecutableSchema({ typeDefs, resolvers })
-
+const schema = makeExecutableSchema({ typeDefs, resolvers })
+exports.schema = schema

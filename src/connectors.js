@@ -1,13 +1,13 @@
-import Mongoose from 'mongoose'
-import bluebird from 'bluebird'
+const Mongoose = require('mongoose')
+const bluebird = require('bluebird')
 
-import EmailConfigs from './models/EmailConfig'
-import FlowConfigs from './models/Flow'
-import EmailLogs from './models/EmailLog'
-import UserLists from './models/User'
-import UserLogs from './models/UserLog'
+const EmailConfigs = require('./models/EmailConfig')
+const FlowConfigs = require('./models/Flow')
+const EmailLogs = require('./models/EmailLog')
+const UserLists = require('./models/User')
+const UserLogs = require('./models/UserLog')
 
-import { mongo } from '../config'
+const { mongo } = require('../config')
 
 Mongoose.Promise = bluebird
 

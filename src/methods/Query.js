@@ -1,5 +1,5 @@
-import mongoose from 'mongoose'
-import { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } from '../connectors'
+const mongoose = require('mongoose')
+const { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } = require('../connectors')
 
 const Query = {
   emailConfigs: () => {

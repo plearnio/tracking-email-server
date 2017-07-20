@@ -12,6 +12,7 @@ const emailLogScheme = new Schema({
   },
   success: Number,
 })
+emailLogScheme.index({ toUser : 'text' })
 
 const EmailLog = mongoose.model('EmailLog', emailLogScheme)
 

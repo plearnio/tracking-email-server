@@ -1,15 +1,7 @@
-import mongoose from 'mongoose'
-import { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } from './connectors'
+const mongoose = require('mongoose')
+const { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } = require('./connectors')
 
-const filterItems = (arr, query) => {
-  const result = arr.filter((el) => {
-    if (el.name.toLowerCase().indexOf(query.toLowerCase()) > -1) return el
-    return false
-  })
-  return result
-}
-
-export const resolvers = {
+const resolvers = {
   Query: {
     emailConfigs: () => {
       const result = EmailConfigs.find({}, emailConfig => emailConfig)
@@ -199,3 +191,5 @@ export const resolvers = {
     }
   }
 }
+
+module.exports = resolvers
