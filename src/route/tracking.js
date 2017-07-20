@@ -28,37 +28,42 @@ tracking.use((req, res, next) => {
 })
 
 const updateEmailLog = (emailLog) => {
-  emailLog.mailConfig.forEach((entry) => {
-    console.log(entry)
-    EmailLog.update({ mailConfig: entry._id },
-    { success: emailLog.success },
-    { multi: true },
-    (err) => {
-      if (err) console.log(err)
-      console.log('Update email log')
-    })
+  const emailLogId = emailLog._id[0]._id
+  const emailLogSuccess = emailLog.success
+  return EmailLog.update({ mailConfig: emailLogId },
+  { success: emailLogSuccess },
+  { multi: true })
+  .then((err) => {
+    if (err) console.log(err)
+    // console.log('Update email log')
+    return true
   })
-  console.log('endhere')
-  return true
 }
 
 const findEmailLog = async (trackData) => {
-  console.log(`percent : ${trackData.percentSuccess}%`)
+  // console.log(`percent : ${trackData.percentSuccess}%`)
+  let result = false
   await EmailLog.aggregate([
     {
       $match: { toUser: mongoose.Types.ObjectId(trackData.userLog.userId) }
     }, {
+      $group:
+      {
+        _id: '$mailConfig',
+        success: { $avg: '$success' },
+      }
+    }, {
       $lookup:
       {
         from: 'emailconfigs',
-        localField: 'mailConfig',
+        localField: '_id',
         foreignField: '_id',
-        as: 'mailConfig'
+        as: '_id'
       }
     }
-  ], (err, docs) => {
-    return docs.some((entry, index) => {
-      return entry.mailConfig[0].expectedFlow.some((expectedFlow) => {
+  ]).exec((err, docs) => {
+    docs.some((entry, index) => {
+      entry._id[0].expectedFlow.some((expectedFlow) => {
         if (JSON.stringify(expectedFlow) === JSON.stringify(trackData.flowData._id)) {
           const userAction = trackData.userLog.action
           const flowsuccessAction = trackData.flowData.successAction.name
@@ -66,34 +71,34 @@ const findEmailLog = async (trackData) => {
           const percentAllSuccess = trackData.percentSuccess
           if (userAction === flowsuccessAction) {
             docs[index].success = 100.0
-            return updateEmailLog(docs[index])
+            result = true
+            updateEmailLog(docs[index])
           } else if (expectedSuccess < percentAllSuccess) {
             docs[index].success = trackData.percentSuccess
-            return updateEmailLog(docs[index])
+            result = true
+            updateEmailLog(docs[index])
           }
-          console.log('bello')
-          return false
         }
-        return expectedFlow
       })
     })
   })
-  await console.log('asdasdasd')
+  return result
 }
 
-const findAction = (trackData) => {
+const findAction = async (trackData) => {
   const userIdFromLog = trackData.userLog.userId
   const flowFromLog = mongoose.Types.ObjectId(trackData.flowData._id)
-  return UserLog.find({ userId: userIdFromLog, flow: flowFromLog }).distinct('action', (err, docs) => {
+  await UserLog.find({ userId: userIdFromLog, flow: flowFromLog }).distinct('action', (err, docs) => {
     if (err) {
       console.log(err)
       return false
     }
-    console.log(docs)
     if (docs.length === 0) return false
     trackData.activeProcess = docs.length
     trackData.percentSuccess = (trackData.activeProcess / trackData.flowData.actionsLen) * 100
-    return findEmailLog(trackData)
+  })
+  return findEmailLog(trackData).then((result) => {
+    return result
   })
 }
 
@@ -104,7 +109,7 @@ const saveLog = (trackData) => {
         const meta = UserLog(trackData.userLog)
         return meta.save()
           .then(() => {
-            console.log(`add log user : ${trackData.userLog.userId} -> ${trackData.userLog.action}`)
+            // console.log(`add log user : ${trackData.userLog.userId} -> ${trackData.userLog.action}`)
             return findAction(trackData)
           })
           .catch((err) => {
@@ -129,7 +134,6 @@ const findFlow = (reqUrl) => {
         const flowData = docs[0]
         trackData.userLog.flow = flowData._id.toString()
         trackData.flowData = flowData
-        console.log(trackData.flowData)
         return saveLog(trackData)
       }
       return false
@@ -142,12 +146,10 @@ const findFlow = (reqUrl) => {
 
 tracking.route('/')
   .post((req, res) => {
-    console.log(req.body)
     findFlow(req).then((result) => {
-      console.log(result)
+      if (result) res.send('update success')
+      else res.send('nothing change')
     })
-    // res.send('ya')
-    // else res.send('bello')
   })
 
 tracking.route('/mail/:mailId/:flow/')
@@ -166,7 +168,6 @@ tracking.route('/pic/:mailId')
   .get((req, res) => {
     res.sendFile(path.resolve('public/images/1px.JPG'))
   })
-
 
 module.exports = {
   tracking,

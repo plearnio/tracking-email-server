@@ -1,7 +1,7 @@
 const chai = require('chai')
 const chaiHttp = require('chai-http')
 
-process.env.NODE_ENmocV = 'test'
+process.env.NODE_ENV = 'test'
 chai.use(chaiHttp)
 global.chai = chai
 global.expect = chai.expect

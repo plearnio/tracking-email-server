@@ -25,10 +25,6 @@ tracking.route('/')
       success: 0
     })
     newEmailLogs.save().then((data) => {
-      // console.log(data._id)
-      // console.log('Add log to database !')
-      // console.log(emailConfig)
-
       // dummy html
       const html = `
         <html>
@@ -42,11 +38,9 @@ tracking.route('/')
           `
 
       const $ = cheerio.load(html)
-      // console.log()
       $('a.call-to-action').each((i, elem) => {
         $(elem).attr('href', `http://localhost:4000/tracking/mail/${data._id}/${encodeURIComponent($(elem).attr('href'))}`)
       });
-      // console.log($.html())
       const overrideHtml = $.html()
       const transporter = nodemailer.createTransport({
         service: 'Gmail',
@@ -59,28 +53,22 @@ tracking.route('/')
         from: `${emailConfig.name} Demo <${fromMail}>`
       })
 
-      // console.log('SMTP Configured')
       const message = {
         to: `${name} <${userEmail}>`,
         subject: `Check ${emailConfig.name} Mail Demo ✔`,
         html: overrideHtml,
       }
 
-      // console.log('Sending Mail')
       transporter.sendMail(message, (error, info) => {
         if (error) {
-          // console.log('Error occurred')
-          // console.log(error.message)
           res.send('something wrong !')
           return
         }
-        // console.log('Message sent successfully!')
-        // console.log('Server responded with "%s"', info.response)
         transporter.close()
         res.send('correct !')
       })
     }).catch((err) => {
-      // console.log(err)
+      console.log(err)
     })
   })
 
