@@ -1,31 +1,24 @@
 const mongoose = require('mongoose')
 const { EmailConfigs, FlowConfigs, EmailLogs, UserLists, UserLogs } = require('../connectors')
 
-const Query = {
-  emailConfigs: () => {
-    const result = EmailConfigs.find({}, emailConfig => emailConfig).lean().exec()
-    return result
-  },
-  flowConfigs: () => {
-    const result = FlowConfigs.find({}, flowconfig => flowconfig).lean().exec()
-    return result
-  },
-  emailLogs: () => {
-    const result = EmailLogs.find({}).lean().exec()
-      .then(emailLogs => emailLogs)
-    return result
-  },
-  userLists: () => {
-    const result = UserLists.find({}).lean().exec()
-      .then(userLists => userLists)
-    return result
-  },
-  userListById: ({ id, pageValue }) => {
-    const result = UserLists.findById({ _id: id }).lean().exec()
+const QueryTrackingData = {
+  // list all emailConfigs
+  emailConfigs: () => EmailConfigs.find({}).lean().exec().then(emailConfig => emailConfig),
+  // list all flows
+  flowConfigs: () => FlowConfigs.find({}).lean().exec().then(flowconfig => flowconfig),
+  // list all emaillogs
+  emailLogs: () => EmailLogs.find({}).lean().exec().then(emailLogs => emailLogs),
+  // list all users
+  userLists: () => UserLists.find({}).lean().exec().then(userLists => userLists),
+  // show user's data and statistic by id
+  userListById: ({ id, pageValue, limit }) => {
+    const limitData = limit || 5
+    // pagination
+    return UserLists.findById({ _id: id }).lean().exec()
       .then(userList => UserLogs.paginate(
           { userId: userList._id }, {
             page: pageValue,
-            limit: 5,
+            limit: limitData,
             sort: { timestamp: 1 }
           }
         ).then((userLogs) => {
@@ -49,6 +42,7 @@ const Query = {
             })
         })
       )
+      // aggregate with emailconfigs and this user
       .then(userList => EmailLogs.aggregate([
         {
           $match: {
@@ -74,6 +68,7 @@ const Query = {
         userList.emailConfigListStat = statData
         return userList
       }))
+      // aggregate with all emaillogs that matched this user
     .then(userList => EmailLogs.aggregate([
       {
         $match: {
@@ -93,10 +88,9 @@ const Query = {
       userList.allStat = statData[0]
       return userList
     }))
-    return result
   },
-  emailLogById: ({ id }) => {
-    const result = EmailLogs.findById({ _id: id }).lean().exec()
+  // show emaillogs by id with emailconfigs data
+  emailLogById: ({ id }) => EmailLogs.findById({ _id: id }).lean().exec()
       .then(emailLog => EmailConfigs.findById({
         _id: emailLog.mailConfig
       }).lean().exec()
@@ -104,12 +98,11 @@ const Query = {
             emailLog.mailConfig = mailConfig
             return emailLog
           })
-      )
-    return result
-  },
-  emailConfigById: ({ id }) => {
-    const result = EmailConfigs.findById({ _id: id }).lean().exec()
+      ),
+  // show emailconfig by id with statistic value
+  emailConfigById: ({ id }) => EmailConfigs.findById({ _id: id }).lean().exec()
       .then((mailConfig) => {
+        // success of each emailconfig
         mailConfig.statistic = EmailLogs.aggregate([
           {
             $group: {
@@ -124,6 +117,7 @@ const Query = {
             }
           }
         ]).then(statData => statData[0])
+        // success of all emailconfigs
         mailConfig.allSuccess = EmailLogs.aggregate([
           {
             $match:
@@ -136,40 +130,58 @@ const Query = {
               count: { $sum: 1 }
             }
           }
-        ]).then((successData) => {
-          return successData
-        })
+        ]).then(successData => successData)
         return mailConfig
-      })
-    return result
-  },
-  flowConfigById: ({ id }) => {
-    const result = FlowConfigs.findById({ _id: id }).lean().exec()
+      }),
+  // show flow by id with statistic value
+  flowConfigById: ({ id }) => FlowConfigs.findById({ _id: id }).lean().exec()
       .then(FlowConfig => EmailConfigs.find({
         expectedFlow: {
           $in: [mongoose.Types.ObjectId(id)]
         }
       }).lean().exec()
-          .then((emailConfig) => {
+          .then(() => {
+            // seperate expected flow in emailconfig and
+            // calculate success per emailconfigs
+            // that contains expected flow
             FlowConfig.statistic = EmailLogs.aggregate([
               {
+                $lookup: {
+                  from: 'emailconfigs',
+                  localField: 'mailConfig',
+                  foreignField: '_id',
+                  as: 'mailConfig'
+                }
+              }, {
+                $unwind: '$mailConfig'
+              }, {
+                $unwind: '$mailConfig.expectedFlow'
+              }, {
                 $group: {
-                  _id: '$mailConfig',
+                  _id: '$mailConfig.expectedFlow',
                   total: { $sum: 1 },
                   successAvg: { $avg: '$success' }
                 }
-              },
-              {
-                $match: {
-                  _id: mongoose.Types.ObjectId(emailConfig[0]._id)
-                }
               }
             ]).then(statData => statData[0])
+            // count total by success value
+            // ex { 50 : 1, 80 : 2 }
+            console.log(id)
             FlowConfig.allSuccess = EmailLogs.aggregate([
               {
-                $match:
-                {
-                  mailConfig: mongoose.Types.ObjectId(emailConfig[0]._id)
+                $lookup: {
+                  from: 'emailconfigs',
+                  localField: 'mailConfig',
+                  foreignField: '_id',
+                  as: 'mailConfig'
+                }
+              }, {
+                $unwind: '$mailConfig'
+              }, {
+                $unwind: '$mailConfig.expectedFlow'
+              }, {
+                $match: {
+                  'mailConfig.expectedFlow': mongoose.Types.ObjectId(id)
                 }
               }, {
                 $group: {
@@ -181,8 +193,6 @@ const Query = {
             return FlowConfig
           })
       )
-    return result
-  }
 }
 
-module.exports = Query
+module.exports = QueryTrackingData
