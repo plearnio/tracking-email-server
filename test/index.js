@@ -77,7 +77,7 @@ describe('Tracking Email', () => {
     chai.request(server)
       .get(`/tracking/mail/${dummyLog._id}/${encodeURIComponent(`http://localhost:3000/demo/${dummyMail.emailConfig.name}`)}`)
       .end((err, res) => {
-        res.should.have.status(401)
+        res.should.redirectTo('http://localhost:3000/demo/register')
         done()
       })
   }).timeout(0)
@@ -90,26 +90,6 @@ describe('Tracking Email', () => {
       })
   }).timeout(0)
 })
-
-describe('Tracking Email', () => {
-  it('it should track when user click link (by request)', (done) => {
-    chai.request(server)
-      .get(`/tracking/mail/${dummyLog._id}/${encodeURIComponent(`http://localhost:3000/demo/${dummyMail.emailConfig.name}`)}`)
-      .end((err, res) => {
-        res.should.have.status(401)
-        done()
-      })
-  }).timeout(0)
-  it('it should response image for track open mail', (done) => {
-    chai.request(server)
-      .get(`/tracking/pic/${dummyLog._id}`)
-      .end((err, res) => {
-        res.should.have.status(200)
-        done()
-      })
-  }).timeout(0)
-})
-
 
 describe('Tracking Flow', () => {
   it('it should track all action correctly', (done) => {

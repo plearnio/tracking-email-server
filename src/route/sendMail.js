@@ -29,9 +29,9 @@ tracking.route('/')
       const html = `
         <html>
           <body>
-          <center style="padding: 20px; border: 2px dashed #ddd">
+          <center style="padding: 20px border: 2px dashed #ddd">
             <h1 style="color:#b1a6ef">${emailConfig.name}</h1>
-            <a class="call-to-action" href="http://localhost:3000/demo/${emailConfig.name}">click</a>
+            <a href="http://localhost:3000/demo/${emailConfig.name}">click</a>
           </center>
           </body>
         </html>
@@ -40,7 +40,7 @@ tracking.route('/')
       const $ = cheerio.load(html)
       $('a.call-to-action').each((i, elem) => {
         $(elem).attr('href', `http://localhost:4000/tracking/mail/${data._id}/${encodeURIComponent($(elem).attr('href'))}`)
-      });
+      })
       const overrideHtml = $.html()
       const transporter = nodemailer.createTransport({
         service: 'Gmail',
