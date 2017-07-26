@@ -14,7 +14,7 @@ tracking.use((req, res, next) => {
 tracking.route('/')
   .post((req, res) => {
     const { data: { name, userEmail, _id }, fromPassword, fromMail, emailConfig } = req.body
-    // console.log(req.body)
+    console.log(req.body)
     const newEmailLogs = EmailLogs({
       toUser: _id,
       mailConfig: emailConfig._id,
@@ -31,7 +31,7 @@ tracking.route('/')
           <body>
           <center style="padding: 20px border: 2px dashed #ddd">
             <h1 style="color:#b1a6ef">${emailConfig.name}</h1>
-            <a href="http://localhost:3000/demo/${emailConfig.name}">click</a>
+            <a class="call-to-action" href="http://localhost:3000/demo/${emailConfig.name}">click</a>
           </center>
           </body>
         </html>

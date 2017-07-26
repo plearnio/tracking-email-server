@@ -27,14 +27,14 @@ tracking.use((req, res, next) => {
   next()
 })
 
-const updateEmailLog = (emailLog) => {
+const updateEmailLog = (emailLog, userId) => {
   // this method will update the emaillog to new success in percentage
 
   const emailLogId = emailLog._id[0]._id
   const emailLogSuccess = emailLog.success
 
   // this update will affect all emaillog that contain emailconfig that we expected
-  return EmailLog.update({ mailConfig: emailLogId },
+  return EmailLog.update({ mailConfig: emailLogId, toUser: userId },
   { success: emailLogSuccess },
   { multi: true })
   .then((err) => {
@@ -91,12 +91,12 @@ const findEmailLog = (trackData) => {
               // the percentage that will update is 100,
               // then pass emaillog that want to update to updateEmailLog()
               docs[index].success = 100.0
-              resolve(updateEmailLog(docs[index]))
+              resolve(updateEmailLog(docs[index], trackData.userLog.userId))
             } else if (expectedSuccess < percentAllSuccess) {
               // the second if the old success in percentage lower than new success
               // it will use new success, then pass emaillog that want to update to updateEmailLog()
               docs[index].success = trackData.percentSuccess
-              resolve(updateEmailLog(docs[index]))
+              resolve(updateEmailLog(docs[index], trackData.userLog.userId))
             } else {
               // another case return false
               resolve(false)

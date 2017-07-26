@@ -11,7 +11,6 @@ const { schema } = require('./src/schema')
 
 const { tracking } = require('./src/route/tracking')
 const sendMail = require('./src/route/sendMail')
-const Query = require('./src/methods/Query')
 
 const PORT = 4000
 const server = express()
@@ -29,7 +28,6 @@ server.use('/graphiql', graphiqlExpress({
 }))
 
 server.use('/tracking', tracking)
-// server.use('/login', login)
 server.use('/sendmail', sendMail)
 
 server.listen(PORT, () =>

@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "nodemon ./server.js --exec babel-node -e js",
+    "setup": "node src/methods/setupDatabase",
     "test": "mocha"
   },
   "author": "",
