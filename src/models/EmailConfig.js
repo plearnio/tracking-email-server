@@ -5,7 +5,8 @@ const Schema = mongoose.Schema
 
 const emailConfigScheme = new Schema({
   name: String,
-  description: String
+  description: String,
+  expectedFlow: Schema.Types.ObjectId,
 })
 
 const EmailConfig = mongoose.model('EmailConfig', emailConfigScheme)

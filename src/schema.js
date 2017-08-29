@@ -1,30 +1,48 @@
-import {
-  makeExecutableSchema,
-} from 'graphql-tools';
+const {
+    makeExecutableSchema,
+} = require('graphql-tools')
 
-import { resolvers } from './resolvers';
+const resolvers = require('./resolvers')
 
 const typeDefs = `
-type Channel {
-  id: ID!                # "!" denotes a required field
-  name: String
-  messages: [Message]!
-}
-
 type Message {
   id: ID!
   text: String
+}
+
+type UserLogs {
+  _id: ID!
+  userId: String
+  action: String
+  timestamp: String
+}
+
+type Success {
+  _id: String
+  count: Int
+}
+
+type Statistic {
+  total: Int
+  successAvg: Float
 }
 
 type EmailConfigs {
   _id: ID!
   name: String
   description: String
+  expectedFlow: [String]
+  statistic: Statistic
+  allSuccess: [Success]
 }
 
 type Counter {
   click: Int
   open: Int
+}
+
+type Actions {
+  name: String
 }
 
 type FlowConfigs {
@@ -35,11 +53,36 @@ type FlowConfigs {
   url: String
   actionsLen: Int
   successAction: Actions
+  statistic: Statistic
+  allSuccess: [Success]
 }
 
-type ExpectedFlow {
-  flow: FlowConfigs
+type AllStat {
+  count: Int,
+  successAvg: Float,
+  clickAvg : Float,
+  openAvg : Float
+}
+
+type UserLists {
+  _id: ID!
+  name: String
+  userEmail: String
+  age: Int
+  pageNow: Int
+  pageAll: Int
+  logs: [UserLogs]
+  emailConfigListStat: [EmailConfigListStat]
+  allStat: AllStat
+}
+
+type EmailConfigListStat {
+  _id: ID!
+  mailConfig: [EmailConfigs]
+  clickAvg: Float
+  openAvg: Float
   success: Float
+  count: Int 
 }
 
 type EmailLogs {
@@ -47,12 +90,9 @@ type EmailLogs {
   toUser: String!
   mailConfig: EmailConfigs
   counter: Counter
-  expectedFlow: [ExpectedFlow]
+  success: Float
 }
 
-type Actions {
-  name: String
-}
 
 input MessageInput{
   channelId: ID!
@@ -61,23 +101,16 @@ input MessageInput{
 
 # This type specifies the entry points into our API
 type Query {
-  channels: [Channel]    # "[]" means this is a list of channels
-  channelById(id: ID!): Channel
-  channelname(name: String!): [Channel]
   emailConfigs: [EmailConfigs]
+  emailConfigById(id: ID!): EmailConfigs
   flowConfigs: [FlowConfigs]
   flowConfigById(id: ID!): FlowConfigs
   emailLogs: [EmailLogs]
   emailLogById(id: ID!): EmailLogs
-  emailConfigById(id: ID!): EmailConfigs
-}
-
-# The mutation root type, used to define all mutations
-type Mutation {
-  addChannel(name: String!): Channel
-  addMessage(message: MessageInput!): Message
-  searchChannel(name: String!): [Channel]
+  userLists: [UserLists]
+  userListById(id: ID!, pageValue: Int): UserLists
 }
 `
 
-export const schema = makeExecutableSchema({ typeDefs, resolvers })
+const schema = makeExecutableSchema({ typeDefs, resolvers })
+exports.schema = schema

@@ -1,5 +1,8 @@
 const mongoose = require('mongoose')
+const mongoosePaginate = require('mongoose-paginate')
+
 mongoose.Promise = require('bluebird')
+
 
 const Schema = mongoose.Schema
 
@@ -8,9 +11,12 @@ const userLogScheme = new Schema({
   action: String,
   timestamp: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
+  flow: Schema.Types.ObjectId,
 })
+
+userLogScheme.plugin(mongoosePaginate)
 
 const UserLog = mongoose.model('UserLog', userLogScheme)
 
